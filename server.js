@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 console.log("Loading environment variables...");
+console.log("API_KEY:", API_KEY ? "Loaded" : "Missing");
+console.log("QDRANT_URL:", QDRANT_URL ? "Loaded" : "Missing");
 
 const API_KEY = process.env.API_KEY;
 
@@ -30,16 +32,39 @@ app.use((req, res, next) => {
 
 app.delete("/resource/:collection", async (req, res) => {
   const { collection } = req.params;
+  console.log(`DELETE /resource/${collection} called`);
   try {
     // Get all point IDs in the collection
-    const scrollResp = await axios.post(
-      `${QDRANT_URL}/collections/${collection}/points/scroll`,
-      {
-        limit: 10000, // adjust as needed for your collection size
-      },
+    //
+    const scrollResp = await axios
+      .post(
+        `${QDRANT_URL}/collections/${collection}/points/scroll`,
+        {
+          limit: 10000, // adjust as needed for your collection size
+        },
+        {
+          headers: {
+            "api-key": process.env.QDRANT_API_KEY,
+          },
+        },
+      )
+      .catch((err) => {
+        console.error(
+          "Error fetching points from collection:",
+          err.response?.data || err.message,
+        );
+        throw new Error(
+          `Error fetching points from collection: ${err.response?.data || err.message}`,
+        );
+      });
+
+    const points = await scrollResp?.data?.result?.points;
+    console.log(
+      `Fetched ${points.length} points from collection ${collection}`,
     );
-    const points = scrollResp.data.points;
+
     if (points.length === 0) {
+      console.log(`No resources found in collection ${collection}`);
       return res
         .status(404)
         .json({ error: "No resources found in collection" });
@@ -47,16 +72,26 @@ app.delete("/resource/:collection", async (req, res) => {
     const ids = points.map((p) => p.id);
 
     // Delete all points
-    await axios.post(`${QDRANT_URL}/collections/${collection}/points/delete`, {
-      points: ids,
-    });
+    const deleteResp = await axios.post(
+      `${QDRANT_URL}/collections/${collection}/points/delete`,
+      {
+        points: ids,
+      },
+      {
+        headers: {
+          "api-key": process.env.QDRANT_API_KEY,
+        },
+      },
+    );
+    console.log(`Deleted ${ids.length} points from collection ${collection}`);
     res.json({ success: true, deleted: ids.length });
   } catch (err) {
+    console.error("Error in DELETE /resource/:collection:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
-
 app.get("/", (req, res) => {
+  console.log("GET / called");
   res.json({ status: "ok" });
 });
 
