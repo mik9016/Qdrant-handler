@@ -63,9 +63,11 @@ app.delete("/resource/:collection", async (req, res) => {
 
     if (points.length === 0) {
       console.log(`No resources found in collection ${collection}`);
-      return res
-        .status(404)
-        .json({ error: "No resources found in collection" });
+      return res.json({
+        success: true,
+        deleted: 0,
+        message: "No resources found to delete",
+      });
     }
     const ids = points.map((p) => p.id);
 
