@@ -5,8 +5,6 @@ import dotenv from "dotenv";
 dotenv.config();
 
 console.log("Loading environment variables...");
-console.log("API_KEY:", API_KEY ? "Loaded" : "Missing");
-console.log("QDRANT_URL:", QDRANT_URL ? "Loaded" : "Missing");
 
 const API_KEY = process.env.API_KEY;
 
